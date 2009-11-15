@@ -1,0 +1,157 @@
+<html>
+<head>
+<title>blog this page</title>
+<script type="text/javascript" src="http://www.google.com/jsapi"></script>
+<script type="text/javascript">
+google.load("gdata", "1.x");
+google.setOnLoadCallback(init);
+var BLOG_NAME = "YOUR BLOG NAME HERE";
+var BLOGGER_AUTH_URL = 'http://www.blogger.com/feeds';
+var BLOGGER_LIST_URL = 'http://www.blogger.com/feeds/default/blogs';
+var BlogPress =  {
+  service: null,
+  blogs: [],
+  cuurrentBlogNum: 0  // modify this according your blog settings.
+};
+var Categories;
+
+
+function el(id) { 
+  return document.getElementById(id);
+}
+
+function changeStatus(status) {
+  el('status').innerHTML = 'Status: ' + status;
+};
+
+function loginOrOut() {
+  var token = google.accounts.user.checkLogin(BLOGGER_AUTH_URL);
+  if(token) {
+    google.accounts.user.logout();
+    init();
+  }
+  else {
+    google.accounts.user.login(BLOGGER_AUTH_URL);
+  }
+}
+
+function init() {
+  var param = new Array();
+  var query = window.location.search.substring(1);
+  var params = query.split('&');
+  for(var i = 0; i < params.length; i++) {
+    var pos = params[i].indexOf('=');
+    if(pos > 0) {
+      param[params[i].substring(0, pos)] = params[i].substring(pos + 1);
+    }
+  }
+  el('title').value = decodeURIComponent(param['title']);
+  el('url').value = decodeURIComponent(param['url']);
+  if(undefined != param['selection'] && '' != param['selection']) {
+    el('comment').value = '『' + decodeURIComponent(param['selection']) + '』';
+  }
+  var token = google.accounts.user.checkLogin(BLOGGER_AUTH_URL);
+  if(token) {
+    el('login').value = "logout";
+    BlogPress.service = new google.gdata.blogger.BloggerService('GoogleInc-bloggerOffline-1');
+    getBlogs();
+    el('submit').disabled = false;
+  }
+  else {
+    el('login').value = "login";
+    el('submit').disabled = true;
+  }
+}
+
+function getBlogs() {
+  var query = new google.gdata.blogger.BlogQuery(BLOGGER_LIST_URL);
+  BlogPress.service.getBlogFeed(query, handleBlogsFeed, handleError);
+}
+
+function handleBlogsFeed(resultsFeedRoot) {
+  var blogsFeed = resultsFeedRoot.feed;
+  BlogPress.blogs = blogsFeed.getEntries();
+  var blog;
+  var title;
+  for(var j = 0; j < BlogPress.blogs.length; j++) {
+    blog = BlogPress.blogs[j];
+    title = blog.getTitle().getText();
+    if(BLOG_NAME == title) {
+      BlogPress.cuurrentBlogNum = j;
+      break;
+    }
+  }
+  if(j == BlogPress.blogs.length) {
+    changeStatus('No such blogs.');
+    return;
+  }
+  el('postTo').innerHTML = 'Post to ' + title;
+  Categories = blog.getCategories();
+  var i = Categories.length;
+  var str = '';
+  while(0 < i) {
+    str += '<tr>';
+    for(var col = 0; col < 4; col++) {
+      if(0 < i) {
+        var j = Categories.length - i;
+        str += '<td><input type="checkbox" id="cat' + j + '" />' + Categories[j].term  + '</td>';
+      }
+      else {
+        str += '<td></td>';
+      }
+      i--;
+    }
+    str += '</tr>';
+  }
+  el('categories').innerHTML = str;
+}
+
+function handleError(error) {
+  changeStatus(error.cause ? error.cause.statusText : error.message);
+};
+
+function submit() {
+  el('submit').disabled = true;
+  var title = el('title').value;
+  var link = '<a href="'+el('url').value+'">'+el('url').value+'</a>';
+  var content = link + "</br>\n" + el('comment').value;
+  var blogPostEntry = new google.gdata.blogger.PostEntry();
+  blogPostEntry.setTitle(google.gdata.atom.Text.create(title));
+  blogPostEntry.setContent(google.gdata.atom.Text.create(content, 'html'));
+  for(var i = 0; i < Categories.length; i++) {
+    if(el('cat' + i).checked) {
+      var c = new google.gdata.atom.Category({scheme: 'http://www.blogger.com/atom/ns#', term: Categories[i].term});
+      blogPostEntry.addCategory(c);
+    }
+  }
+  for(var i = 0; i < 3; i++) {
+    if('' != el('newcat' + i).value) {
+      var c = new google.gdata.atom.Category({scheme: 'http://www.blogger.com/atom/ns#', term: el('newcat' + i).value});
+      blogPostEntry.addCategory(c);
+    }
+  }
+  var blog = BlogPress.blogs[BlogPress.cuurrentBlogNum];
+  var blogPostHref = blog.getEntryPostLink().getHref();
+  BlogPress.service.insertEntry(blogPostHref, blogPostEntry, handleEntryPost, handleError);
+}
+
+function handleEntryPost(entryRoot) {
+  changeStatus('Successfully added.');
+}
+
+</script>
+</head>
+<body>
+<img src="pumpkin_64.png" alt="An image of the same domain is needed somehow." />
+<div><input id="login" type="button" value="login" onClick="loginOrOut()" /></div>
+<hr>
+<div id="postTo"></div>
+<div>Title: <input type="text" id="title" size=70 /></div>
+<div>URL: <input type="text" id="url" size=100/></div>
+<div>Commnet: <br/><textarea id="comment" rows=10 cols=50></textarea></div>
+<div><input id="submit" type="button" value="submit" onClick="submit()" /></div>
+<table id="categories"></table>
+<input type="text" id="newcat0" /><input type="text" id="newcat1" /><input type="text" id="newcat2" />
+<div id="status">Not posted yet.</div>
+</body>
+</html>
