@@ -5,33 +5,29 @@
 <script type="text/javascript">
 google.load("gdata", "1.x");
 google.setOnLoadCallback(init);
-var BLOG_NAME = "YOUR BLOG NAME HERE";
-var BLOGGER_AUTH_URL = 'http://www.blogger.com/feeds';
-var BLOGGER_LIST_URL = 'http://www.blogger.com/feeds/default/blogs';
-var BlogPress =  {
+
+var BlogInfo = {
+  BLOGGER_AUTH_URL: 'http://www.blogger.com/feeds',
+  BLOGGER_LIST_URL: 'http://www.blogger.com/feeds/default/blogs',
   service: null,
   blogs: [],
-  cuurrentBlogNum: 0  // modify this according your blog settings.
+  blogName: "YOUR BLOG NAME HERE", // modify this according your blog settings.
+  currentBlogNum: 0,
+  categories: []
 };
-var Categories;
 
+function el(id) {return document.getElementById(id);}
 
-function el(id) { 
-  return document.getElementById(id);
-}
-
-function changeStatus(status) {
-  el('status').innerHTML = 'Status: ' + status;
-};
+function changeStatus(status) {el('status').innerHTML = 'Status: ' + status;}
 
 function loginOrOut() {
-  var token = google.accounts.user.checkLogin(BLOGGER_AUTH_URL);
+  var token = google.accounts.user.checkLogin(BlogInfo.BLOGGER_AUTH_URL);
   if(token) {
     google.accounts.user.logout();
     init();
   }
   else {
-    google.accounts.user.login(BLOGGER_AUTH_URL);
+    google.accounts.user.login(BlogInfo.BLOGGER_AUTH_URL);
   }
 }
 
@@ -48,12 +44,12 @@ function init() {
   el('title').value = decodeURIComponent(param['title']);
   el('url').value = decodeURIComponent(param['url']);
   if(undefined != param['selection'] && '' != param['selection']) {
-    el('comment').value = '『' + decodeURIComponent(param['selection']) + '』';
+    el('comment').value = '"' + decodeURIComponent(param['selection']) + '"';
   }
-  var token = google.accounts.user.checkLogin(BLOGGER_AUTH_URL);
+  var token = google.accounts.user.checkLogin(BlogInfo.BLOGGER_AUTH_URL);
   if(token) {
     el('login').value = "logout";
-    BlogPress.service = new google.gdata.blogger.BloggerService('GoogleInc-bloggerOffline-1');
+    BlogInfo.service = new google.gdata.blogger.BloggerService('GoogleInc-bloggerOffline-1');
     getBlogs();
     el('submit').disabled = false;
   }
@@ -64,37 +60,37 @@ function init() {
 }
 
 function getBlogs() {
-  var query = new google.gdata.blogger.BlogQuery(BLOGGER_LIST_URL);
-  BlogPress.service.getBlogFeed(query, handleBlogsFeed, handleError);
+  var query = new google.gdata.blogger.BlogQuery(BlogInfo.BLOGGER_LIST_URL);
+  BlogInfo.service.getBlogFeed(query, handleBlogsFeed, handleError);
 }
 
 function handleBlogsFeed(resultsFeedRoot) {
   var blogsFeed = resultsFeedRoot.feed;
-  BlogPress.blogs = blogsFeed.getEntries();
+  BlogInfo.blogs = blogsFeed.getEntries();
   var blog;
   var title;
-  for(var j = 0; j < BlogPress.blogs.length; j++) {
-    blog = BlogPress.blogs[j];
+  for(var j = 0; j < BlogInfo.blogs.length; j++) {
+    blog = BlogInfo.blogs[j];
     title = blog.getTitle().getText();
-    if(BLOG_NAME == title) {
-      BlogPress.cuurrentBlogNum = j;
+    if(BlogInfo.blogName == title) {
+      BlogInfo.cuurrentBlogNum = j;
       break;
     }
   }
-  if(j == BlogPress.blogs.length) {
+  if(j == BlogInfo.blogs.length) {
     changeStatus('No such blogs.');
     return;
   }
   el('postTo').innerHTML = 'Post to ' + title;
-  Categories = blog.getCategories();
-  var i = Categories.length;
+  BlogInfo.categories = blog.getCategories();
+  var i = BlogInfo.categories.length;
   var str = '';
   while(0 < i) {
     str += '<tr>';
     for(var col = 0; col < 4; col++) {
       if(0 < i) {
-        var j = Categories.length - i;
-        str += '<td><input type="checkbox" id="cat' + j + '" />' + Categories[j].term  + '</td>';
+        var j = BlogInfo.categories.length - i;
+        str += '<td><input type="checkbox" id="cat' + j + '" />' + BlogInfo.categories[j].term  + '</td>';
       }
       else {
         str += '<td></td>';
@@ -118,9 +114,9 @@ function submit() {
   var blogPostEntry = new google.gdata.blogger.PostEntry();
   blogPostEntry.setTitle(google.gdata.atom.Text.create(title));
   blogPostEntry.setContent(google.gdata.atom.Text.create(content, 'html'));
-  for(var i = 0; i < Categories.length; i++) {
+  for(var i = 0; i < BlogInfo.categories.length; i++) {
     if(el('cat' + i).checked) {
-      var c = new google.gdata.atom.Category({scheme: 'http://www.blogger.com/atom/ns#', term: Categories[i].term});
+      var c = new google.gdata.atom.Category({scheme: 'http://www.blogger.com/atom/ns#', term: BlogInfo.categories[i].term});
       blogPostEntry.addCategory(c);
     }
   }
@@ -130,9 +126,9 @@ function submit() {
       blogPostEntry.addCategory(c);
     }
   }
-  var blog = BlogPress.blogs[BlogPress.cuurrentBlogNum];
+  var blog = BlogInfo.blogs[BlogInfo.cuurrentBlogNum];
   var blogPostHref = blog.getEntryPostLink().getHref();
-  BlogPress.service.insertEntry(blogPostHref, blogPostEntry, handleEntryPost, handleError);
+  BlogInfo.service.insertEntry(blogPostHref, blogPostEntry, handleEntryPost, handleError);
 }
 
 function handleEntryPost(entryRoot) {
