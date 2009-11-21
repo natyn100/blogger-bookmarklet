@@ -44,7 +44,7 @@ function init() {
   el('title').value = decodeURIComponent(param['title']);
   el('url').value = decodeURIComponent(param['url']);
   if(undefined != param['selection'] && '' != param['selection']) {
-    el('comment').value = '"' + decodeURIComponent(param['selection']) + '"';
+    el('comment').value = '"' + decodeURIComponent(param['selection']).replace(/[\n|\r]/g, '') + '"';
   }
   var token = google.accounts.user.checkLogin(BlogInfo.BLOGGER_AUTH_URL);
   if(token) {
