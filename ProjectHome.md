@@ -1,0 +1,1 @@
+If you have a blog in Blogger, you can easily post what you see on the web including page title, url, text selection, category.
